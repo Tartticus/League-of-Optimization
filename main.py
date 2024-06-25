@@ -51,7 +51,7 @@ def submit_clicked():
     formula2 = round((1 - (100/(100+(MR-mpen))))*100,2)
     diff = formula -formula2
 
-    print(f"you will do {diff}% more magic damage to a {selected_champion} with", selected_items)
+    print(f"you will do {diff}% more magic damage to  {selected_champion} with", selected_items)
     root.destroy()  # Destroy the Tkinter window
     return mpen, calculated_value, selected_champion
 
@@ -91,6 +91,13 @@ champion_dropdown.pack(padx=20, pady=10)
 # Label for instruction
 instruction_label = tk.Label(root, text="Select a champion:")
 instruction_label.pack()
+
+# Entry widget for level input
+level_label = tk.Label(root, text="Enter champion's level:")
+level_label.pack()
+level_entry = tk.Entry(root)
+level_entry.pack()
+
 
 # Submit button
 submit_button = tk.Button(root, text="Submit", command=submit_clicked)
