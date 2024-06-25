@@ -15,7 +15,7 @@ selected_champion = None  # Initialize selected champion globally
 additional_MR = 0  # Additional MR from items
 
 def image_clicked(index):
-    global mpen, ppen, additional_MR  # Access the global variables
+    global mpen, ppen  # Access the global variables
 
     if index == 0:
         selected_label.config(text="Shadowflame")
@@ -28,7 +28,7 @@ def image_clicked(index):
     elif index == 2:
         selected_label.config(text="Stormsurge")
         selected_items.append("Stormsurge")
-        mpen += 10
+        mpen += 12
     elif index == 3:
         selected_label.config(text="Cryptobloom")
         selected_items.append("Cryptobloom")
@@ -57,11 +57,15 @@ def submit_clicked():
         return
     
     # Get additional MR input from user
-    try:
-        additional_MR = float(simpledialog.askstring("Additional MR", "Enter additional MR from items:"))
-    except ValueError:
-        print("Invalid additional MR input")
-        return
+    additional_MR_str = simpledialog.askstring("Additional MR", "Enter additional MR from items:")
+    if additional_MR_str is None or additional_MR_str.strip() == "":
+        additional_MR = 0
+    else:
+        try:
+            additional_MR = float(additional_MR_str)
+        except ValueError:
+            print("Invalid additional MR input")
+            return
 
     # Perform calculations based on level, MR, and other columns in champs DataFrame
     multiplier = champs.loc[champs['Champ'] == selected_champion, 'Growth'].values[0]
@@ -127,12 +131,21 @@ level_label.pack()
 level_entry = tk.Entry(root)
 level_entry.pack()
 
+# Entry widget for additional MR input
+additional_mr_label = tk.Label(root, text="Enter additional MR from items:")
+additional_mr_label.pack()
+additional_mr_entry = tk.Entry(root)
+additional_mr_entry.pack()
+
 # Submit button
 submit_button = tk.Button(root, text="Submit", command=submit_clicked)
 submit_button.pack(pady=10)
 
 # Run the main loop
 root.mainloop()
+
+
+
 
 
 
