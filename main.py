@@ -99,7 +99,7 @@ def handle_defensive_item(index):
     elif index == 7:
         selected_label_defensive.config(text="Spirit Visage")
         selected_defensive_items.append("Spirit Visage")
-        additional_MR += 450
+        additional_MR += 60
     elif index == 8:
         selected_label_defensive.config(text="Mercury's Treads")
         selected_defensive_items.append("Mercury's Treads")
@@ -114,6 +114,7 @@ def on_select_champion(event=None):
     selected_champion = champion_var.get()
     if selected_champion:
         print(f"Selected champion: {selected_champion}")
+    
 
 def reset_form():
     global mpen, ppen, calculated_value, selected_items, additional_MR
@@ -149,7 +150,9 @@ def submit_clicked():
     except ValueError:
         print("Invalid level input")
         return
-    
+    selected_champion = champion_var.get()
+    if selected_champion is None:
+        selected_champion == 'Aatrox'
     # Perform calculations based on level, MR, and other columns in champs DataFrame
     multiplier = champs.loc[champs['Champ'] == selected_champion, 'Growth'].values[0]
     base = champs.loc[champs['Champ'] == selected_champion, 'Base'].values[0]
@@ -179,9 +182,9 @@ def submit_clicked():
     result_text = (
        
         f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {additional_MR} additional MR, "
-        f"if you have {selected_items_str} and {selected_defensive_items_str}\n"
+        f"if you have {selected_items_str} and {selected_defensive_items_str}\n\n"
         f"{selected_champion} with {additional_MR} additional MR will take {formula3}% of magic damage with no pen items vs "
-        f"{formula4}% of magic damage, if you have {selected_items_str} and {selected_defensive_items_str}\n"
+        f"{formula4}% of magic damage, if you have {selected_items_str}\n"
     )
     
     result_label.config(text=result_text)
@@ -289,7 +292,6 @@ result_label = ttk.Label(root, text="")
 result_label.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky='w')
 # Run the main loop
 root.mainloop()
-
 
 
 
