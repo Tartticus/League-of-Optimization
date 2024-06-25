@@ -1,17 +1,21 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, simpledialog
 from PIL import Image, ImageTk
 import pandas as pd
 
 # Load Champions data from Excel
 champs = pd.read_excel(r"C:\Users\Matth\OneDrive\Documents\LoL\Champs.xlsx")
 
-# Define mpen and calculated_value as global variables
+# Define mpen, ppen, and calculated_value as global variables
 mpen = 0
+ppen = 0
 calculated_value = 0
 selected_items = [] # list for items
+selected_champion = None  # Initialize selected champion globally
+additional_MR = 0  # Additional MR from items
+
 def image_clicked(index):
-    global mpen  # Access the global mpen variable
+    global mpen, ppen, additional_MR  # Access the global variables
 
     if index == 0:
         selected_label.config(text="Shadowflame")
@@ -24,34 +28,57 @@ def image_clicked(index):
     elif index == 2:
         selected_label.config(text="Stormsurge")
         selected_items.append("Stormsurge")
-        mpen += 12
+        mpen += 10
+    elif index == 3:
+        selected_label.config(text="Cryptobloom")
+        selected_items.append("Cryptobloom")
+        ppen += 0.35  # Adjusted to 0.35 to match your description
+    elif index == 4:
+        selected_label.config(text="Voidstaff")
+        selected_items.append("Voidstaff")
+        ppen += 0.40  # Adjusted to 0.40 to match your description
     
-    return mpen
+    return mpen, ppen
 
 def on_select_champion(event=None):
-    global calculated_value  # Access the global calculated_value variable
     global selected_champion
     selected_champion = champion_var.get()
     if selected_champion:
         print(f"Selected champion: {selected_champion}")
-        # Ask for champion's level
-        level = int(input(f"What level is {selected_champion}? "))
-        # Perform calculations based on level and other columns in champs DataFrame
-        multiplier = champs.loc[champs['Champ'] == selected_champion, 'Growth'].values[0]
-        base  = champs.loc[champs['Champ'] == selected_champion, 'Base'].values[0]
-        print(f"Multiplier for {selected_champion} at level {level}: {multiplier}")
-        # Calculate the value globally accessible
-        calculated_value = base + (level * multiplier)
-        print(f"Enemies MR: {calculated_value}")
 
 def submit_clicked():
-    global mpen, calculated_value, selected_champion, selected_items
-    MR = calculated_value
-    formula = round((1 - (100/(100+MR)))*100,2)
-    formula2 = round((1 - (100/(100+(MR-mpen))))*100,2)
-    diff = formula -formula2
+    global mpen, ppen, calculated_value, selected_champion, selected_items, additional_MR
+    
+    # Get the level input from Entry widget
+    try:
+        level = int(level_entry.get())
+    except ValueError:
+        print("Invalid level input")
+        return
+    
+    # Get additional MR input from user
+    try:
+        additional_MR = float(simpledialog.askstring("Additional MR", "Enter additional MR from items:"))
+    except ValueError:
+        print("Invalid additional MR input")
+        return
 
-    print(f"you will do {diff}% more magic damage to  {selected_champion} with", selected_items)
+    # Perform calculations based on level, MR, and other columns in champs DataFrame
+    multiplier = champs.loc[champs['Champ'] == selected_champion, 'Growth'].values[0]
+    base = champs.loc[champs['Champ'] == selected_champion, 'Base'].values[0]
+    print(f"Multiplier for {selected_champion} at level {level}: {multiplier}")
+    
+    # Calculate the value globally accessible
+    calculated_value = base + (level * multiplier)
+    print(f"Enemies MR: {calculated_value}")
+
+    # Calculate formulas and differences
+    MR = calculated_value + additional_MR
+    formula = round((1 - (100 / (100 + MR))) * 100, 2)
+    formula2 = round((1 - (100 / ((100 + (MR - mpen)*(1-ppen))))) * 100, 2)
+    diff = formula - formula2
+
+    print(f"You will do {diff}% more magic damage to {selected_champion} with {selected_items}")
     root.destroy()  # Destroy the Tkinter window
     return mpen, calculated_value, selected_champion
 
@@ -63,7 +90,9 @@ root.title("Pick your pen items")
 image_paths = [
     r"C:\Users\Matth\OneDrive\Documents\LoL\shadowflame.png",
     r"C:\Users\Matth\OneDrive\Documents\LoL\Sorcerer%27s_Shoes_item_old2.webp",
-    r"C:\Users\Matth\OneDrive\Documents\LoL\stormsurge.webp"
+    r"C:\Users\Matth\OneDrive\Documents\LoL\stormsurge.webp",
+    r"C:\Users\Matth\OneDrive\Documents\LoL\cryptobloom.webp",
+    r"C:\Users\Matth\OneDrive\Documents\LoL\void.webp"
 ]
 
 # List to store ImageTk objects
@@ -98,14 +127,9 @@ level_label.pack()
 level_entry = tk.Entry(root)
 level_entry.pack()
 
-
 # Submit button
 submit_button = tk.Button(root, text="Submit", command=submit_clicked)
 submit_button.pack(pady=10)
 
 # Run the main loop
 root.mainloop()
-
-final_mpen, final_calculated_value, selected_champion = submit_clicked()
-print("Stored final mpen value:", final_mpen)
-print("Stored final calculated value:", final_calculated_value)
