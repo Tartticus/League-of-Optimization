@@ -14,16 +14,27 @@ selected_items = [] # list for items
 selected_champion = None  # Initialize selected champion globally
 additional_MR = 0  # Additional MR from items
 
+# List to keep track of clicked indices
+clicked_indices = []
+
 def image_clicked(index):
     global mpen, ppen  # Access the global variables
+
+    if index in clicked_indices:
+        print("Item already selected!")
+        return
+
+    # Disable the button
+    buttons[index].config(state=tk.DISABLED)
+    clicked_indices.append(index)
 
     if index == 0:
         selected_label.config(text="Shadowflame")
         selected_items.append("Shadowflame")
         mpen += 12
     elif index == 1:
-        selected_label.config(text="Sorcs shoes")
-        selected_items.append("Sorcs shoes")
+        selected_label.config(text="Sorcs Shoes")
+        selected_items.append("Sorcs Shoes")
         mpen += 18
     elif index == 2:
         selected_label.config(text="Stormsurge")
@@ -37,15 +48,18 @@ def image_clicked(index):
         selected_label.config(text="Voidstaff")
         selected_items.append("Voidstaff")
         ppen += 0.40  # Adjusted to 0.40 to match your description
-    
-    return mpen, ppen
+
+    update_display()
+
+def update_display():
+    selected_items_label.config(text=f"Selected items: {', '.join(selected_items)}")
 
 def on_select_champion(event=None):
     global selected_champion
     selected_champion = champion_var.get()
     if selected_champion:
         print(f"Selected champion: {selected_champion}")
-
+    
 def submit_clicked():
     global mpen, ppen, calculated_value, selected_champion, selected_items, additional_MR
     
@@ -70,19 +84,26 @@ def submit_clicked():
     # Perform calculations based on level, MR, and other columns in champs DataFrame
     multiplier = champs.loc[champs['Champ'] == selected_champion, 'Growth'].values[0]
     base = champs.loc[champs['Champ'] == selected_champion, 'Base'].values[0]
-    print(f"Multiplier for {selected_champion} at level {level}: {multiplier}")
+    print(f"Additional MR from items: {additional_MR}")
+    print(f"MR Multiplier for {selected_champion} at level {level}: {multiplier}")
     
     # Calculate the value globally accessible
-    calculated_value = base + (level * multiplier)
-    print(f"Enemies MR: {calculated_value}")
+    calculated_value = round(base + (level * multiplier),2)
+    print(f"Enemies MR: {calculated_value}\n")
 
     # Calculate formulas and differences
     MR = calculated_value + additional_MR
     formula = round((1 - (100 / (100 + MR))) * 100, 2)
     formula2 = round((1 - (100 / ((100 + (MR - mpen)*(1-ppen))))) * 100, 2)
     diff = round((formula - formula2),2)
-
-    print(f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {selected_items}")
+    formula3 = round(( (100 / (100 + MR))) * 100, 2)
+    formula4 = round(((100 / ((100 + (MR - mpen)*(1-ppen))))) * 100, 2)
+    
+    # Format selected items without brackets and quotes
+    selected_items_str = ', '.join(selected_items)
+    
+    print(f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {additional_MR} additional MR, if you have {selected_items_str}\n")
+    print(f"{selected_champion} with {additional_MR} additional MR will take {formula3}% of magic damage with no pen items vs {formula4}% of magic damage, if you have {selected_items_str}\n")
     root.destroy()  # Destroy the Tkinter window
     return mpen, calculated_value, selected_champion
 
@@ -101,7 +122,8 @@ image_paths = [
 
 # List to store ImageTk objects
 images = []
-
+# List to store buttons
+buttons = []
 # Load images and create buttons
 for i, path in enumerate(image_paths):
     image = Image.open(path)
@@ -111,10 +133,15 @@ for i, path in enumerate(image_paths):
     # Create a button with the image and bind it to a function
     button = tk.Button(root, image=images[i], command=lambda idx=i: image_clicked(idx))
     button.pack(pady=5)
+    buttons.append(button)
 
 # Label to display selected image
 selected_label = tk.Label(root, text="Pick your items")
 selected_label.pack(pady=10)
+
+# Label to display selected items
+selected_items_label = tk.Label(root, text="Selected items: ")
+selected_items_label.pack()
 
 # Dropdown menu for champion selection
 champion_var = tk.StringVar()
