@@ -76,9 +76,9 @@ def submit_clicked():
     MR = calculated_value + additional_MR
     formula = round((1 - (100 / (100 + MR))) * 100, 2)
     formula2 = round((1 - (100 / ((100 + (MR - mpen)*(1-ppen))))) * 100, 2)
-    diff = formula - formula2
+    diff = round((formula - formula2),2)
 
-    print(f"You will do {diff}% more magic damage to {selected_champion} with {selected_items}")
+    print(f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {selected_items}")
     root.destroy()  # Destroy the Tkinter window
     return mpen, calculated_value, selected_champion
 
@@ -133,3 +133,6 @@ submit_button.pack(pady=10)
 
 # Run the main loop
 root.mainloop()
+
+
+
