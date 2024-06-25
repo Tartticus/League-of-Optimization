@@ -16,18 +16,25 @@ selected_champion = None  # Initialize selected champion globally
 additional_MR = 0  # Additional MR from items
 
 # List to keep track of clicked indices
-clicked_indices = []
-
+clicked_mp_indices = []
+clicked_def_indices = []
 def image_clicked(index, item_type):
-    global mpen, ppen, defensive_items  # Access the global variables
+    global mpen, ppen, buttons, defensive_buttons  # Access the global variables
 
-    if index in clicked_indices:
+    if index in clicked_mp_indices and item_type == "offensive":
         print("Item already selected!")
         return
-
+    if index in clicked_def_indices and item_type == "defensive":
+        print("Item already selected!")
+        return
     # Disable the button
-    buttons[index].config(state=tk.DISABLED)
-    clicked_indices.append(index)
+    if item_type == "offensive":
+        buttons[index].config(state=tk.DISABLED)
+        clicked_mp_indices.append(index)
+    elif item_type == "defensive":
+        defensive_buttons[index].config(state=tk.DISABLED)
+        clicked_def_indices.append(index)
+    
 
     if item_type == "offensive":
         handle_offensive_item(index)
@@ -60,7 +67,7 @@ def handle_offensive_item(index):
         ppen += 0.40  # Adjusted to 0.40 to match your description
 
 def handle_defensive_item(index):
-    global additional_MR
+    global additional_MR, selected_label_defensive
     if index == 0:
         selected_label_defensive.config(text="Abyssal Mask")
         selected_defensive_items.append("Abyssal Mask")
@@ -82,8 +89,8 @@ def handle_defensive_item(index):
         selected_defensive_items.append("Maw of Malmortius")
         additional_MR += 50
     elif index == 5:
-        selected_label_defensive.config(text="Hextech Rocketbelt")
-        selected_defensive_items.append("Hextech Rocketbelt")
+        selected_label_defensive.config(text="Hallow Radiance")
+        selected_defensive_items.append("Hallow Radiance")
         additional_MR += 40
     elif index == 6:
         selected_label_defensive.config(text="Wit's End")
@@ -99,8 +106,8 @@ def handle_defensive_item(index):
         additional_MR += 35
 
 def update_display():
-    selected_items_label.config(text=f"Selected offensive items: {', '.join(selected_items)}")
-    selected_defensive_items_label.config(text=f"Selected defensive items: {', '.join(selected_defensive_items)}")
+    selected_label.config(text=f"Selected offensive items: {', '.join(selected_items)}")
+    selected_label_defensive.config(text=f"Selected defensive items: {', '.join(selected_defensive_items)}")
 
 def on_select_champion(event=None):
     global selected_champion
@@ -108,6 +115,31 @@ def on_select_champion(event=None):
     if selected_champion:
         print(f"Selected champion: {selected_champion}")
 
+def reset_form():
+    global mpen, ppen, calculated_value, selected_items, additional_MR
+    mpen = 0
+    ppen = 0
+    calculated_value = 0
+    selected_items.clear()
+    selected_defensive_items.clear()
+    additional_MR = 0
+    clicked_mp_indices.clear()
+    clicked_def_indices.clear()
+
+    # Reset the buttons
+    for button in buttons:
+        button.config(state=tk.NORMAL)
+    for button in defensive_buttons:
+        button.config(state=tk.NORMAL)
+
+    selected_label.config(text="Selected offensive items: None")
+    selected_label_defensive.config(text="Selected defensive items: None")
+    result_label.config(text="")
+
+    # Clear the level entry and champion selection
+    level_entry.delete(0, tk.END)
+    champion_var.set("Aatrox")
+    
 def submit_clicked():
     global mpen, ppen, calculated_value, selected_champion, selected_items, additional_MR
     
@@ -143,7 +175,17 @@ def submit_clicked():
     # Print results
     print(f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {additional_MR} additional MR, if you have {selected_items_str} and {selected_defensive_items_str}\n")
     print(f"{selected_champion} with {additional_MR} additional MR will take {formula3}% of magic damage with no pen items vs {formula4}% of magic damage, if you have {selected_items_str} and {selected_defensive_items_str}\n")
-    root.destroy()  # Destroy the Tkinter window
+    # Display results in the label
+    result_text = (
+       
+        f"You will do {diff}% more magic damage to {selected_champion} at level {level} with {additional_MR} additional MR, "
+        f"if you have {selected_items_str} and {selected_defensive_items_str}\n"
+        f"{selected_champion} with {additional_MR} additional MR will take {formula3}% of magic damage with no pen items vs "
+        f"{formula4}% of magic damage, if you have {selected_items_str} and {selected_defensive_items_str}\n"
+    )
+    
+    result_label.config(text=result_text)
+    
     return mpen, calculated_value, selected_champion
 
 # Create the main window
@@ -211,16 +253,21 @@ for i, path in enumerate(defensive_image_paths):
     defensive_buttons.append(button)
 
 # Labels to display selected items
-selected_items_label = ttk.Label(root, text="Selected offensive items: None")
-selected_items_label.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+selected_label = ttk.Label(root, text="Selected offensive items: None")
+selected_label.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
-selected_defensive_items_label = ttk.Label(root, text="Selected defensive items: None")
-selected_defensive_items_label.grid(row=1, column=1, padx=10, pady=10, sticky='w')
+selected_label_defensive = ttk.Label(root, text="Selected defensive item: None")
+selected_label_defensive.grid(row=1, column=1, padx=10, pady=10, sticky='w')
 
 # Dropdown menu for champion selection
 champion_var = tk.StringVar()
 champion_dropdown = ttk.OptionMenu(root, champion_var, *champs['Champ'].unique(), command=on_select_champion)
 champion_dropdown.grid(row=2, column=0, columnspan=2, padx=20, pady=10)
+# Labels for champ selection
+Champ_label = ttk.Label(root, text="Select Champion")
+Champ_label.grid(row=2, column=0, padx=10, pady=10, sticky='w')
+
+
 
 # Label for level input
 level_label = ttk.Label(root, text="Enter champion's level:")
@@ -232,9 +279,16 @@ level_entry.grid(row=3, column=1, padx=10, pady=5, sticky='w')
 submit_button = ttk.Button(root, text="Submit", command=submit_clicked)
 submit_button.grid(row=4, column=0, columnspan=2, pady=10)
 
+#Reset button
+# Submit button
+Reset_button = ttk.Button(root, text="Reset", command=reset_form)
+Reset_button.grid(row=4, column=1, columnspan=2, pady=10)
+
+# Label to display the result
+result_label = ttk.Label(root, text="")
+result_label.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky='w')
 # Run the main loop
 root.mainloop()
-
 
 
 
