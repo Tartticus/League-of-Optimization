@@ -57,8 +57,8 @@ def submit_clicked():
         return
     
     # Get additional MR input from user
-    additional_MR_str = simpledialog.askstring("Additional MR", "Enter additional MR from items:")
-    if additional_MR_str is None or additional_MR_str.strip() == "":
+    additional_MR_str = additional_mr_entry.get()
+    if additional_MR_str.strip() == "":
         additional_MR = 0
     else:
         try:
@@ -143,6 +143,7 @@ submit_button.pack(pady=10)
 
 # Run the main loop
 root.mainloop()
+
 
 
 
