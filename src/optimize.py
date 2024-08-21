@@ -22,6 +22,7 @@ else:
     exit()
 
 # Get Match History
+
 match_url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=50&api_key={api_key}'
 match_response = requests.get(match_url)
 
