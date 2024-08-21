@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-
+import matplotlib.pyplot as plt
 api_key = 'RGAPI-fa1a6451-1a3f-4529-b25b-18139c0e701f'
 
 game_name = 'BlackInter69'
@@ -82,3 +82,40 @@ print(f"Retrieved {len(matches)} matches.")
 #Create Df
 matches2 = pd.DataFrame(matches)
 matches2.to_csv('matches.csv')
+
+# Convert to DataFrame
+df = pd.DataFrame(matches)
+
+# Convert the datetime to a pandas datetime object and extract the date
+df['datetime'] = pd.to_datetime(df['datetime'])
+df['date'] = df['datetime'].dt.date
+
+# Initialize a plot
+plt.figure(figsize=(12, 8))
+
+# Group the data by date
+for date, group in df.groupby('date'):
+    # Sort by datetime within each group
+    group = group.sort_values('datetime')
+    
+    # Calculate cumulative wins and total games played for the day
+    group['cumulative_wins'] = group['win'].cumsum()
+    group['total_games'] = range(1, len(group) + 1)
+    
+    # Calculate cumulative win rate
+    group['cumulative_win_rate'] = group['cumulative_wins'] / group['total_games'] * 100
+    
+    # Plot the cumulative win rate for this day
+    plt.plot(group['total_games'], group['cumulative_win_rate'], marker='o', linestyle='-', label=f'{date}')
+    
+# Adding title and labels
+plt.title('Cumulative Win Rate Over Games (Separated by Day)')
+plt.xlabel('Game Number (Per Day)')
+plt.ylabel('Cumulative Win Rate (%)')
+plt.ylim(0, 100)  # Set y-axis limits to 0-100%
+plt.grid(True)
+plt.legend(title='Date')
+
+# Show the plot
+plt.tight_layout()
+plt.show()
