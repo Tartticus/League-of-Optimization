@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
-api_key = 'RGAPI-fa1a6451-1a3f-4529-b25b-18139c0e701f'
+api_key = 'api_key'
 
 game_name = 'BlackInter69'
 tag_line = 'NA1'
