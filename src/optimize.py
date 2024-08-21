@@ -1,5 +1,5 @@
 import requests
-
+import pandas as pd
 
 api_key = 'RGAPI-fa1a6451-1a3f-4529-b25b-18139c0e701f'
 
@@ -46,8 +46,39 @@ for match_id in match_ids:
 
     if match_detail_response.status_code == 200:
         match_details = match_detail_response.json()
-        matches.append(match_details)
+
+        # Extracting participant information
+        participant_data = None
+        for participant in match_details['info']['participants']:
+            if participant['puuid'] == puuid:
+                participant_data = participant
+                break
+
+        # Extracting win/loss and game datetime
+        win_status = participant_data['win']
+        game_datetime = match_details['info']['gameStartTimestamp']
+
+        # Convert timestamp to readable format
+        from datetime import datetime
+        game_datetime = datetime.utcfromtimestamp(game_datetime / 1000).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Append match details including win/loss and datetime
+        matches.append({
+            'match_id': match_id,
+            'win': win_status,
+            'datetime': game_datetime,
+            'match_details': match_details
+        })
     else:
         print(f"Error fetching match details for match ID: {match_id}")
 
+# Example: Print the first match's win/loss and datetime
+for match in matches:
+    print(f"Match ID: {match['match_id']}, Win: {match['win']}, DateTime: {match['datetime']}")
+
 print(f"Retrieved {len(matches)} matches.")
+
+
+#Create Df
+matches2 = pd.DataFrame(matches)
+matches2.to_csv('matches.csv')
