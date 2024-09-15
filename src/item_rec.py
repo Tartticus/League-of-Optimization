@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
+from PIL import Image, ImageTk  # Make sure Pillow is installed
+from io import BytesIO  # To handle image data from requests
+import requests
 
 api_key = 'RGAPI-a6746745-332a-4aac-9c99-6166b0494f0c'
 con = duckdb.connect('builds.db')
@@ -15,6 +18,42 @@ tag_line = '9616'
 item_url = "http://ddragon.leagueoflegends.com/cdn/13.19.1/data/en_US/item.json"
 item_response = requests.get(item_url)
 item_data = item_response.json()['data']
+
+# Function to get champion image URL
+def get_champion_image_url(champion_name):
+    return f"http://ddragon.leagueoflegends.com/cdn/13.19.1/img/champion/{champion_name}.png"
+
+# Function to get item image URL
+def get_item_image_url(item_id):
+    return f"http://ddragon.leagueoflegends.com/cdn/13.19.1/img/item/{item_id}.png"
+
+
+def download_image(url, size=(64, 64)):
+    response = requests.get(url, stream=True)
+    img_data = response.content
+    img = Image.open(BytesIO(img_data))
+    img = img.resize(size, Image.ANTIALIAS)
+    return ImageTk.PhotoImage(img)
+
+# Function to display items
+def display_items(best_build):
+    for widget in item_frame.winfo_children():
+        widget.destroy()
+    if best_build:
+        for i, item_id in enumerate(best_build[:6]):
+            if item_id != 0:
+                item_url = get_item_image_url(item_id)
+                item_image = download_image(item_url)
+                item_label = tk.Label(item_frame, image=item_image)
+                item_label.image = item_image
+                item_label.grid(row=0, column=i)
+
+# Function to update the champion image
+def update_champion_image(champion_name):
+    image_url = get_champion_image_url(champion_name)
+    champion_image = download_image(image_url, size=(128, 128))
+    champion_image_label.config(image=champion_image)
+    champion_image_label.image = champion_image
 
 # Function to get item name from item id
 def get_item_name(item_id):
@@ -127,25 +166,37 @@ def update_items(*args):
     if opponent_champion != "Select a Champion":
         best_build = get_best_items_against(opponent_champion)
         if best_build:
-            # Get item names instead of item IDs
-            items = [f"Item {i+1}: {get_item_name(item)}" for i, item in enumerate(best_build[:6])]
+            print(f"Displaying build for {opponent_champion}")
+            display_items(best_build)
+            update_champion_image(opponent_champion)
             win_rate = best_build[7] / best_build[6] * 100 if best_build[6] > 0 else 0
-            result_text.set(f"Best Build Against {opponent_champion}:\n" + "\n".join(items) + f"\nYour Win Rate: {win_rate:.2f}%")
+            result_text.set(f"Best Build Against {opponent_champion}:\nWin Rate: {win_rate:.2f}%")
         else:
             result_text.set("No match data for this opponent champion.")
     else:
         result_text.set("")
 
+
+
 # Set up the Tkinter window
 root = tk.Tk()
-root.title("Your Build Optimizer")
+root.title("Vlad Build Optimizer")
+
+champion_image_label = tk.Label(root)
+champion_image_label.pack(pady=10)
+
+item_frame = tk.Frame(root)
+item_frame.pack(pady=10)
+
+result_text = tk.StringVar()
+result_label = tk.Label(root, textvariable=result_text, justify="left")
+result_label.pack(pady=10)
 
 # Label for dropdown
 label = tk.Label(root, text="Select an Opponent Champion:")
 label.pack(pady=10)
 champion_var = tk.StringVar()
 champion_dropdown = ttk.Combobox(root, textvariable=champion_var)
-
 # Full list of champions
 champions = [
     "Aatrox", "Ahri", "Akali", "Akshan", "Alistar", "Amumu", "Anivia", "Annie",
