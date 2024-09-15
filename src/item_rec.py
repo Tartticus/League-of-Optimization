@@ -22,9 +22,10 @@ def get_item_name(item_id):
 
 # Create the table to store build data if it doesn't exist
 con.execute('''
-CREATE TABLE IF NOT EXISTS OpponentBuilds (
+CREATE TABLE IF NOT EXISTS ChampionBuilds (
     match_id VARCHAR PRIMARY KEY,
-    opponent_champion_name VARCHAR,
+    champion_name VARCHAR,
+    opponent_champion VARCHAR,
     item0 INT,
     item1 INT,
     item2 INT,
@@ -58,10 +59,10 @@ else:
     print("Error fetching match history")
     exit()
 
-# Fetch match details and save opponent builds to DuckDB
+# Fetch match details and save builds to DuckDB
 for match_id in match_ids:
     # Check if match_id already exists in the database
-    result = con.execute('SELECT COUNT(*) FROM OpponentBuilds WHERE match_id = ?', (match_id,)).fetchone()
+    result = con.execute('SELECT COUNT(*) FROM ChampionBuilds WHERE match_id = ?', (match_id,)).fetchone()
 
     if result[0] == 0:  # If match_id doesn't exist, insert the data
         match_detail_url = f'https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
@@ -70,75 +71,80 @@ for match_id in match_ids:
         if match_detail_response.status_code == 200:
             match_details = match_detail_response.json()
             participant_data = None
+            opponent_champion = None
 
-            # Find the team of the player
+            # Find your team ID
             my_team_id = None
             for participant in match_details['info']['participants']:
                 if participant['puuid'] == puuid:
+                    participant_data = participant
                     my_team_id = participant['teamId']
                     break
 
-            # Collect opponent data from the other team
+            # Get the opponent champion (same lane, opposite team)
             for participant in match_details['info']['participants']:
-                if participant['teamId'] != my_team_id:  # Opponent team
-                    opponent_champion_name = participant['championName']
-                    build = [
-                        participant['item0'],
-                        participant['item1'],
-                        participant['item2'],
-                        participant['item3'],
-                        participant['item4'],
-                        participant['item5']
-                    ]
-                    win = participant['win']
+                if participant['teamId'] != my_team_id and participant['lane'] == participant_data['lane']:
+                    opponent_champion = participant['championName']
+                    break
 
-                    # Insert the opponent data into the database
-                    try:
-                        con.execute('''
-                        INSERT INTO OpponentBuilds 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ''', [match_id, opponent_champion_name, *build, win, datetime.fromtimestamp(match_details['info']['gameCreation'] // 1000)])
-                    except: 
-                        pass
-# Function to get the best items based on win rate for an opponent champion
-def get_best_items_against(champion_name):
+            if participant_data:
+                game_timestamp = match_details['info']['gameCreation'] // 1000
+                match_datetime = datetime.fromtimestamp(game_timestamp)
+                champion_name = participant_data['championName']
+                build = [
+                    participant_data['item0'],
+                    participant_data['item1'],
+                    participant_data['item2'],
+                    participant_data['item3'],
+                    participant_data['item4'],
+                    participant_data['item5']
+                ]
+                win = participant_data['win']
+
+                # Insert the match data into the database
+                con.execute('''
+                INSERT INTO ChampionBuilds 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', [match_id, champion_name, opponent_champion, *build, win, match_datetime])
+
+# Function to get the best items used by you based on win rate against an opponent champion
+def get_best_items_against(opponent_champion):
     query = '''
     SELECT item0, item1, item2, item3, item4, item5, COUNT(*) as matches, 
            SUM(CASE WHEN win THEN 1 ELSE 0 END) as wins
-    FROM OpponentBuilds
-    WHERE opponent_champion_name = ?
+    FROM ChampionBuilds
+    WHERE opponent_champion = ?
     GROUP BY item0, item1, item2, item3, item4, item5
     ORDER BY wins DESC, matches DESC
     LIMIT 1
     '''
-    result = con.execute(query, (champion_name,)).fetchall()
+    result = con.execute(query, (opponent_champion,)).fetchall()
     return result[0] if result else []
 
 # Function to update the suggested items when an opponent champion is selected
 def update_items(*args):
-    champion_name = champion_var.get()
-    if champion_name != "Select a Champion":
-        best_build = get_best_items_against(champion_name)
+    opponent_champion = champion_var.get()
+    if opponent_champion != "Select a Champion":
+        best_build = get_best_items_against(opponent_champion)
         if best_build:
             # Get item names instead of item IDs
             items = [f"Item {i+1}: {get_item_name(item)}" for i, item in enumerate(best_build[:6])]
             win_rate = best_build[7] / best_build[6] * 100 if best_build[6] > 0 else 0
-            result_text.set(f"Best Build Against {champion_name}:\n" + "\n".join(items) + f"\nWin Rate: {win_rate:.2f}%")
+            result_text.set(f"Best Build Against {opponent_champion}:\n" + "\n".join(items) + f"\nYour Win Rate: {win_rate:.2f}%")
         else:
-            result_text.set("No match data for this champion.")
+            result_text.set("No match data for this opponent champion.")
     else:
         result_text.set("")
 
 # Set up the Tkinter window
 root = tk.Tk()
-root.title("Opponent Build Analyzer")
+root.title("Your Build Optimizer")
 
 # Label for dropdown
 label = tk.Label(root, text="Select an Opponent Champion:")
 label.pack(pady=10)
 champion_var = tk.StringVar()
 champion_dropdown = ttk.Combobox(root, textvariable=champion_var)
-
 
 # Full list of champions
 champions = [
